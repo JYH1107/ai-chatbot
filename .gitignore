@@ -1,0 +1,9 @@
+.env
+.env.prod
+.env.deploy
+*.env
+node_modules/
+frontend/dist/
+backend/dist/
+.DS_Store
+Thumbs.db
