@@ -1,23 +1,29 @@
-const OpenAI = require('openai');
+const axios = require('axios');
 const cacheService = require('./cacheService');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const HF_API_URL = 'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2';
 
 async function embed(text) {
-  // 캐시 확인 (동일 텍스트 재호출 방지)
+  // 캐시 확인
   const cacheKey = 'emb:' + Buffer.from(text).toString('base64').slice(0, 40);
   const cached = await cacheService.getRaw(cacheKey);
   if (cached) {
     return JSON.parse(cached);
   }
 
-  // OpenAI 임베딩 API 호출
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small', // 가장 저렴한 모델
-    input: text.slice(0, 8000),      // 최대 길이 제한
-  });
+  // HuggingFace 무료 API 호출
+  const response = await axios.post(
+    HF_API_URL,
+    { inputs: text.slice(0, 512) },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
 
-  const embedding = response.data[0].embedding;
+  const embedding = response.data;
 
   // 24시간 캐시 저장
   await cacheService.setRaw(cacheKey, JSON.stringify(embedding), 86400);
